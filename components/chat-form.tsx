@@ -3,6 +3,7 @@
 import { cn } from "@/lib/utils";
 
 import { useChat } from "@ai-sdk/react";
+import { useState, useEffect } from "react";
 
 import { ArrowUpIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -17,8 +18,23 @@ export function ChatForm({
   className,
   ...props
 }: React.ComponentProps<"form">) {
+  const [provider, setProvider] = useState("google");
+  const [apiKey, setApiKey] = useState("");
+  const modelsByProvider: Record<string, string[]> = {
+    google: ["gemini-2.5-flash-preview-04-17", "gemini-pro"],
+    openai: ["gpt-4o", "gpt-4-turbo", "gpt-3.5-turbo"],
+    deepseek: ["deepseek-chat"],
+  };
+  const [model, setModel] = useState(modelsByProvider[provider][0]);
+  const [instructions, setInstructions] = useState("You are a helpful assistant.");
+
+  useEffect(() => {
+    setModel(modelsByProvider[provider][0]);
+  }, [provider]);
+
   const { messages, input, setInput, append } = useChat({
     api: "/api/chat",
+    body: { provider, apiKey, model, instructions },
   });
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
@@ -65,6 +81,61 @@ export function ChatForm({
     </div>
   );
 
+  const settings = (
+    <div className="my-4 flex flex-col gap-2">
+      <div className="flex items-center gap-2">
+        <label className="w-24 text-sm">AI Provider</label>
+        <select
+          className="flex-1 rounded-md border bg-background px-2 py-1"
+          value={provider}
+          onChange={(e) => setProvider(e.target.value)}
+          disabled={messages.length > 0}
+        >
+          <option value="google">Google</option>
+          <option value="openai">OpenAI</option>
+          <option value="deepseek">Deepseek</option>
+        </select>
+      </div>
+      <div className="flex items-center gap-2">
+        <label className="w-24 text-sm">API Key</label>
+        <input
+          type="password"
+          className="flex-1 rounded-md border bg-background px-2 py-1"
+          value={apiKey}
+          onChange={(e) => setApiKey(e.target.value)}
+          disabled={messages.length > 0}
+          placeholder="API Key"
+        />
+      </div>
+      <div className="flex items-center gap-2">
+        <label className="w-24 text-sm">Model</label>
+        <select
+          className="flex-1 rounded-md border bg-background px-2 py-1"
+          value={model}
+          onChange={(e) => setModel(e.target.value)}
+          disabled={messages.length > 0}
+        >
+          {modelsByProvider[provider].map((m) => (
+            <option key={m} value={m}>
+              {m}
+            </option>
+          ))}
+        </select>
+      </div>
+      <div className="flex items-center gap-2">
+        <label className="w-24 text-sm">Instructions</label>
+        <input
+          type="text"
+          className="flex-1 rounded-md border bg-background px-2 py-1"
+          value={instructions}
+          onChange={(e) => setInstructions(e.target.value)}
+          disabled={messages.length > 0}
+          placeholder="System instructions"
+        />
+      </div>
+    </div>
+  );
+
   return (
     <main
       className={cn(
@@ -72,8 +143,9 @@ export function ChatForm({
         className
       )}
       {...props}
-    >
+   >
       <div className="flex-1 content-center overflow-y-auto px-6">
+        {settings}
         {messages.length ? messageList : header}
       </div>
       <form
